@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" fill="none">
+  <defs>
+    <linearGradient id="heroGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#fce7f3"/>
+      <stop offset="50%" style="stop-color:#f9a8d4"/>
+      <stop offset="100%" style="stop-color:#ec4899"/>
+    </linearGradient>
+    <linearGradient id="accentGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#f9a8d4"/>
+      <stop offset="100%" style="stop-color:#ec4899"/>
+    </linearGradient>
+    <linearGradient id="bunnyInner" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#fce7f3"/>
+      <stop offset="100%" style="stop-color:#fbcfe8"/>
+    </linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="8" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+  </defs>
+
+  <!-- Background circles -->
+  <circle cx="200" cy="150" r="120" fill="url(#heroGrad)" opacity="0.1"/>
+  <circle cx="200" cy="150" r="90" fill="url(#heroGrad)" opacity="0.15"/>
+  <circle cx="200" cy="150" r="60" fill="url(#heroGrad)" opacity="0.2"/>
+
+  <!-- Main logo box with bunny -->
+  <g filter="url(#glow)">
+    <rect x="150" y="100" width="100" height="100" rx="20" fill="url(#accentGrad)"/>
+
+    <!-- Bunny inside the box - centered at 200, 150 -->
+    <g transform="translate(200, 150)">
+      <!-- Left ear -->
+      <ellipse cx="-16" cy="-32" rx="8" ry="20" fill="white" opacity="0.9"/>
+      <ellipse cx="-16" cy="-32" rx="4" ry="14" fill="url(#bunnyInner)"/>
+      <!-- Right ear -->
+      <ellipse cx="16" cy="-32" rx="8" ry="20" fill="white" opacity="0.9"/>
+      <ellipse cx="16" cy="-32" rx="4" ry="14" fill="url(#bunnyInner)"/>
+      <!-- Head -->
+      <circle cx="0" cy="0" r="28" fill="white" opacity="0.95"/>
+      <!-- Eyes -->
+      <ellipse cx="-10" cy="-4" rx="5" ry="6" fill="#18181b"/>
+      <ellipse cx="10" cy="-4" rx="5" ry="6" fill="#18181b"/>
+      <circle cx="-8" cy="-6" r="2" fill="white"/>
+      <circle cx="12" cy="-6" r="2" fill="white"/>
+      <!-- Nose -->
+      <ellipse cx="0" cy="8" rx="4" ry="3" fill="#be185d"/>
+      <!-- Mouth -->
+      <path d="M -6 14 Q 0 20 6 14" stroke="#be185d" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+    </g>
+  </g>
+
+  <!-- Floating elements representing jobs -->
+  <g opacity="0.8">
+    <rect x="60" y="80" width="40" height="40" rx="8" fill="#a78bfa"/>
+    <rect x="300" y="60" width="35" height="35" rx="6" fill="#67e8f9"/>
+    <rect x="320" y="180" width="45" height="45" rx="10" fill="#86efac"/>
+    <rect x="40" y="180" width="30" height="30" rx="6" fill="#fde047"/>
+  </g>
+
+  <!-- Connection lines -->
+  <g stroke="#ec4899" stroke-width="2" opacity="0.3">
+    <line x1="100" y1="100" x2="150" y2="130"/>
+    <line x1="317" y1="77" x2="250" y2="120"/>
+    <line x1="342" y1="202" x2="250" y2="170"/>
+    <line x1="70" y1="195" x2="150" y2="170"/>
+  </g>
+
+  <!-- Speed lines -->
+  <g stroke="url(#accentGrad)" stroke-width="3" stroke-linecap="round" opacity="0.4">
+    <line x1="100" y1="250" x2="140" y2="250"/>
+    <line x1="120" y1="260" x2="180" y2="260"/>
+    <line x1="90" y1="270" x2="160" y2="270"/>
+  </g>
+</svg>
