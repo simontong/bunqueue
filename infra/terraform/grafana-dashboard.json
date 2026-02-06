@@ -1,0 +1,143 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "bunqueue Overview",
+    "tags": ["bunqueue", "job-queue"],
+    "timezone": "browser",
+    "refresh": "10s",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Jobs per Second",
+        "type": "graph",
+        "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
+        "targets": [
+          {
+            "expr": "rate(bunqueue_jobs_total[1m])",
+            "legendFormat": "{{queue}} - {{status}}"
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "title": "Queue Depth",
+        "type": "graph",
+        "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 },
+        "targets": [
+          {
+            "expr": "bunqueue_queue_depth",
+            "legendFormat": "{{queue}}"
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "Job Latency (p99)",
+        "type": "graph",
+        "gridPos": { "x": 0, "y": 8, "w": 12, "h": 8 },
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.99, rate(bunqueue_job_duration_seconds_bucket[5m]))",
+            "legendFormat": "{{queue}}"
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "Failure Rate",
+        "type": "graph",
+        "gridPos": { "x": 12, "y": 8, "w": 12, "h": 8 },
+        "targets": [
+          {
+            "expr": "rate(bunqueue_jobs_total{status=\"failed\"}[5m]) / rate(bunqueue_jobs_total[5m]) * 100",
+            "legendFormat": "{{queue}}"
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "title": "Active Workers",
+        "type": "stat",
+        "gridPos": { "x": 0, "y": 16, "w": 6, "h": 4 },
+        "targets": [
+          {
+            "expr": "bunqueue_workers_active"
+          }
+        ]
+      },
+      {
+        "id": 6,
+        "title": "DLQ Size",
+        "type": "stat",
+        "gridPos": { "x": 6, "y": 16, "w": 6, "h": 4 },
+        "targets": [
+          {
+            "expr": "sum(bunqueue_dlq_size)"
+          }
+        ]
+      },
+      {
+        "id": 7,
+        "title": "Memory Usage",
+        "type": "gauge",
+        "gridPos": { "x": 12, "y": 16, "w": 6, "h": 4 },
+        "targets": [
+          {
+            "expr": "process_resident_memory_bytes / 1024 / 1024"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "MB",
+            "max": 1024
+          }
+        }
+      },
+      {
+        "id": 8,
+        "title": "Database Size",
+        "type": "stat",
+        "gridPos": { "x": 18, "y": 16, "w": 6, "h": 4 },
+        "targets": [
+          {
+            "expr": "bunqueue_db_size_bytes / 1024 / 1024"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "MB"
+          }
+        }
+      },
+      {
+        "id": 9,
+        "title": "Jobs by Customer",
+        "type": "table",
+        "gridPos": { "x": 0, "y": 20, "w": 24, "h": 8 },
+        "targets": [
+          {
+            "expr": "sum by (instance) (increase(bunqueue_jobs_total[24h]))",
+            "format": "table",
+            "instant": true
+          }
+        ]
+      }
+    ],
+    "templating": {
+      "list": [
+        {
+          "name": "customer",
+          "type": "query",
+          "query": "label_values(bunqueue_jobs_total, instance)",
+          "refresh": 1
+        },
+        {
+          "name": "queue",
+          "type": "query",
+          "query": "label_values(bunqueue_jobs_total{instance=\"$customer\"}, queue)",
+          "refresh": 1
+        }
+      ]
+    }
+  }
+}

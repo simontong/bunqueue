@@ -1,0 +1,28 @@
+# Hetzner Cloud API Token
+# Get it from: https://console.hetzner.cloud/projects/<project>/security/tokens
+hcloud_token = "your-hetzner-api-token"
+
+# SSH public key for server access
+ssh_public_key = "ssh-rsa AAAA... your-key"
+
+# Datacenter location
+# Options: fsn1 (Falkenstein), nbg1 (Nuremberg), hel1 (Helsinki), ash (Ashburn)
+location = "fsn1"
+
+# Customer configurations
+customers = {
+  "acme-corp" = {
+    plan       = "starter"
+    auth_token = "acme-secret-token-12345"
+  }
+
+  "bigtech-inc" = {
+    plan       = "pro"
+    auth_token = "bigtech-secret-token-67890"
+  }
+
+  "enterprise-co" = {
+    plan       = "enterprise"
+    auth_token = "enterprise-secret-token-xxxxx"
+  }
+}
