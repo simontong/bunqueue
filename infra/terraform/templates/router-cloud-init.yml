@@ -1,0 +1,56 @@
+#cloud-config
+package_update: true
+packages:
+  - curl
+  - unzip
+
+runcmd:
+  # Install Bun
+  - curl -fsSL https://bun.sh/install | bash
+  - ln -s /root/.bun/bin/bun /usr/local/bin/bun
+
+  # Create directories
+  - mkdir -p /opt/bunqueue-router /var/log/bunqueue-router
+
+  # Install bunqueue
+  - cd /opt/bunqueue-router
+  - /root/.bun/bin/bun add bunqueue
+
+  # Create config
+  - |
+    cat > /opt/bunqueue-router/.env << 'ENV'
+    ROUTER_PORT=6800
+    NODES=${nodes_config}
+    CUSTOMERS=${customers_config}
+    HEALTH_CHECK_INTERVAL=10000
+    ENV
+
+  # Create systemd service
+  - |
+    cat > /etc/systemd/system/bunqueue-router.service << 'SERVICE'
+    [Unit]
+    Description=bunqueue Router Server
+    After=network.target
+
+    [Service]
+    Type=simple
+    User=root
+    WorkingDirectory=/opt/bunqueue-router
+    EnvironmentFile=/opt/bunqueue-router/.env
+    ExecStart=/root/.bun/bin/bun run node_modules/bunqueue/dist/router/server.js
+    Restart=always
+    RestartSec=5
+    StandardOutput=append:/var/log/bunqueue-router/stdout.log
+    StandardError=append:/var/log/bunqueue-router/stderr.log
+
+    # Resource limits
+    LimitNOFILE=65535
+
+    [Install]
+    WantedBy=multi-user.target
+    SERVICE
+
+  # Start service
+  - systemctl daemon-reload
+  - systemctl enable bunqueue-router
+  - systemctl start bunqueue-router
