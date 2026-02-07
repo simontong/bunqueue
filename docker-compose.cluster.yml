@@ -1,0 +1,195 @@
+version: '3.8'
+
+# bunqueue Cluster Setup
+# Usage: docker-compose -f docker-compose.cluster.yml up -d
+
+services:
+  # ============ etcd ============
+  etcd:
+    image: quay.io/coreos/etcd:v3.5.9
+    container_name: bunqueue-etcd
+    command:
+      - etcd
+      - --name=etcd1
+      - --listen-client-urls=http://0.0.0.0:2379
+      - --advertise-client-urls=http://etcd:2379
+      - --listen-peer-urls=http://0.0.0.0:2380
+      - --initial-advertise-peer-urls=http://etcd:2380
+      - --initial-cluster=etcd1=http://etcd:2380
+    ports:
+      - "2379:2379"
+    volumes:
+      - etcd_data:/etcd-data
+    healthcheck:
+      test: ["CMD", "etcdctl", "endpoint", "health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+    networks:
+      - bunqueue-net
+
+  # ============ Router (Go) ============
+  router:
+    build: ./router-go
+    container_name: bunqueue-router
+    environment:
+      - ROUTER_PORT=6800
+      - ETCD_ENDPOINTS=etcd:2379
+    ports:
+      - "6800:6800"
+    depends_on:
+      etcd:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - bunqueue-net
+
+  # ============ bunqueue Nodes ============
+  node1:
+    build: .
+    container_name: bunqueue-node1
+    environment:
+      - HTTP_PORT=6790
+      - TCP_PORT=6789
+      - DATA_PATH=/data/queue.db
+      - NODE_ID=node1
+    volumes:
+      - node1_data:/data
+    restart: unless-stopped
+    networks:
+      - bunqueue-net
+
+  node2:
+    build: .
+    container_name: bunqueue-node2
+    environment:
+      - HTTP_PORT=6790
+      - TCP_PORT=6789
+      - DATA_PATH=/data/queue.db
+      - NODE_ID=node2
+    volumes:
+      - node2_data:/data
+    restart: unless-stopped
+    networks:
+      - bunqueue-net
+
+  node3:
+    build: .
+    container_name: bunqueue-node3
+    environment:
+      - HTTP_PORT=6790
+      - TCP_PORT=6789
+      - DATA_PATH=/data/queue.db
+      - NODE_ID=node3
+    volumes:
+      - node3_data:/data
+    restart: unless-stopped
+    networks:
+      - bunqueue-net
+
+  node4:
+    build: .
+    container_name: bunqueue-node4
+    environment:
+      - HTTP_PORT=6790
+      - TCP_PORT=6789
+      - DATA_PATH=/data/queue.db
+      - NODE_ID=node4
+    volumes:
+      - node4_data:/data
+    restart: unless-stopped
+    networks:
+      - bunqueue-net
+
+  node5:
+    build: .
+    container_name: bunqueue-node5
+    environment:
+      - HTTP_PORT=6790
+      - TCP_PORT=6789
+      - DATA_PATH=/data/queue.db
+      - NODE_ID=node5
+    volumes:
+      - node5_data:/data
+    restart: unless-stopped
+    networks:
+      - bunqueue-net
+
+  # ============ Monitoring ============
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: bunqueue-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./infra/prometheus-cluster.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    restart: unless-stopped
+    networks:
+      - bunqueue-net
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: bunqueue-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=bunqueue
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana_data:/var/lib/grafana
+    restart: unless-stopped
+    networks:
+      - bunqueue-net
+
+  # ============ Setup (runs once to register nodes) ============
+  setup:
+    image: quay.io/coreos/etcd:v3.5.9
+    container_name: bunqueue-setup
+    depends_on:
+      etcd:
+        condition: service_healthy
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        echo "Waiting for etcd..."
+        sleep 2
+
+        echo "Registering nodes..."
+        etcdctl --endpoints=etcd:2379 put /bunqueue/nodes/node1 '{"host":"node1","port":6790,"weight":1,"healthy":true}'
+        etcdctl --endpoints=etcd:2379 put /bunqueue/nodes/node2 '{"host":"node2","port":6790,"weight":1,"healthy":true}'
+        etcdctl --endpoints=etcd:2379 put /bunqueue/nodes/node3 '{"host":"node3","port":6790,"weight":1,"healthy":true}'
+        etcdctl --endpoints=etcd:2379 put /bunqueue/nodes/node4 '{"host":"node4","port":6790,"weight":1,"healthy":true}'
+        etcdctl --endpoints=etcd:2379 put /bunqueue/nodes/node5 '{"host":"node5","port":6790,"weight":1,"healthy":true}'
+        echo "Nodes registered!"
+
+        echo "Registering customers..."
+        etcdctl --endpoints=etcd:2379 put /bunqueue/customers/demo '{"nodeIds":["node1"]}'
+        etcdctl --endpoints=etcd:2379 put /bunqueue/customers/acme '{"nodeIds":["node1","node2"]}'
+        etcdctl --endpoints=etcd:2379 put /bunqueue/customers/bigtech '{"nodeIds":["node3","node4","node5"]}'
+        echo "Customers registered!"
+
+        echo "Verifying..."
+        etcdctl --endpoints=etcd:2379 get /bunqueue/ --prefix
+
+        echo "Setup complete!"
+    networks:
+      - bunqueue-net
+
+networks:
+  bunqueue-net:
+    driver: bridge
+
+volumes:
+  etcd_data:
+  node1_data:
+  node2_data:
+  node3_data:
+  node4_data:
+  node5_data:
+  prometheus_data:
+  grafana_data:
