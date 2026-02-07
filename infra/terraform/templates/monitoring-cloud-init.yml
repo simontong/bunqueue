@@ -1,0 +1,177 @@
+#cloud-config
+package_update: true
+packages:
+  - docker.io
+  - docker-compose
+
+runcmd:
+  - systemctl enable docker
+  - systemctl start docker
+  - mkdir -p /opt/monitoring
+  - cd /opt/monitoring
+  - |
+    cat > docker-compose.yml << 'COMPOSE'
+    version: '3.8'
+    services:
+      prometheus:
+        image: prom/prometheus:latest
+        container_name: prometheus
+        ports:
+          - "9090:9090"
+        volumes:
+          - ./prometheus.yml:/etc/prometheus/prometheus.yml
+          - ./alerts.yml:/etc/prometheus/alerts.yml
+          - prometheus_data:/prometheus
+        command:
+          - '--config.file=/etc/prometheus/prometheus.yml'
+          - '--storage.tsdb.path=/prometheus'
+          - '--storage.tsdb.retention.time=30d'
+          - '--web.enable-lifecycle'
+        restart: unless-stopped
+
+      grafana:
+        image: grafana/grafana:latest
+        container_name: grafana
+        ports:
+          - "3000:3000"
+        environment:
+          - GF_SECURITY_ADMIN_PASSWORD=bunqueue-admin
+          - GF_USERS_ALLOW_SIGN_UP=false
+          - GF_SERVER_ROOT_URL=https://monitoring-${region}.bunqueue.io
+        volumes:
+          - grafana_data:/var/lib/grafana
+          - ./dashboards:/etc/grafana/provisioning/dashboards
+          - ./datasources:/etc/grafana/provisioning/datasources
+        restart: unless-stopped
+
+      alertmanager:
+        image: prom/alertmanager:latest
+        container_name: alertmanager
+        ports:
+          - "9093:9093"
+        volumes:
+          - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml
+        restart: unless-stopped
+
+      node-exporter:
+        image: prom/node-exporter:latest
+        container_name: node-exporter
+        ports:
+          - "9100:9100"
+        restart: unless-stopped
+
+    volumes:
+      prometheus_data:
+      grafana_data:
+    COMPOSE
+  - |
+    cat > prometheus.yml << 'PROM'
+    global:
+      scrape_interval: 15s
+      evaluation_interval: 15s
+      external_labels:
+        region: '${region}'
+
+    alerting:
+      alertmanagers:
+        - static_configs:
+            - targets: ['alertmanager:9093']
+
+    rule_files:
+      - /etc/prometheus/alerts.yml
+
+    scrape_configs:
+      - job_name: 'prometheus'
+        static_configs:
+          - targets: ['localhost:9090']
+
+      - job_name: 'node'
+        static_configs:
+          - targets: ['node-exporter:9100']
+
+      - job_name: 'bunqueue'
+        file_sd_configs:
+          - files:
+              - /etc/prometheus/targets/*.json
+            refresh_interval: 30s
+    PROM
+  - |
+    cat > alerts.yml << 'ALERTS'
+    groups:
+      - name: bunqueue
+        rules:
+          - alert: BunqueueDown
+            expr: up{job="bunqueue"} == 0
+            for: 1m
+            labels:
+              severity: critical
+            annotations:
+              summary: "bunqueue instance down"
+              description: "{{ $labels.instance }} is down"
+
+          - alert: HighQueueDepth
+            expr: bunqueue_queue_depth > 10000
+            for: 5m
+            labels:
+              severity: warning
+            annotations:
+              summary: "High queue depth"
+              description: "Queue {{ $labels.queue }} has {{ $value }} pending jobs"
+
+          - alert: HighFailureRate
+            expr: rate(bunqueue_jobs_total{status="failed"}[5m]) / rate(bunqueue_jobs_total[5m]) > 0.05
+            for: 5m
+            labels:
+              severity: warning
+            annotations:
+              summary: "High job failure rate"
+              description: "Failure rate is {{ $value | humanizePercentage }}"
+
+          - alert: DLQGrowing
+            expr: increase(bunqueue_dlq_size[1h]) > 100
+            labels:
+              severity: warning
+            annotations:
+              summary: "DLQ growing rapidly"
+
+          - alert: HighLatency
+            expr: histogram_quantile(0.99, rate(bunqueue_job_duration_seconds_bucket[5m])) > 10
+            for: 5m
+            labels:
+              severity: warning
+            annotations:
+              summary: "High job latency"
+              description: "p99 latency is {{ $value }}s"
+    ALERTS
+  - |
+    cat > alertmanager.yml << 'ALERT'
+    global:
+      resolve_timeout: 5m
+      slack_api_url: '${slack_webhook_url}'
+
+    route:
+      group_by: ['alertname', 'customer', 'region']
+      group_wait: 10s
+      group_interval: 10s
+      repeat_interval: 4h
+      receiver: 'slack'
+      routes:
+        - match:
+            severity: critical
+          receiver: 'pagerduty'
+          continue: true
+
+    receivers:
+      - name: 'slack'
+        slack_configs:
+          - channel: '#bunqueue-alerts'
+            send_resolved: true
+            title: '{{ .Status | toUpper }}: {{ .CommonAnnotations.summary }}'
+            text: '{{ .CommonAnnotations.description }}'
+
+      - name: 'pagerduty'
+        pagerduty_configs:
+          - service_key: '${pagerduty_key}'
+    ALERT
+  - mkdir -p /etc/prometheus/targets
+  - docker-compose up -d

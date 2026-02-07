@@ -1,0 +1,52 @@
+# ============ Hetzner Cloud ============
+hcloud_token   = "your-hetzner-api-token"
+ssh_public_key = "ssh-rsa AAAA... your-key"
+
+# ============ Cloudflare ============
+cloudflare_api_token  = "your-cloudflare-api-token"
+cloudflare_account_id = "your-cloudflare-account-id"
+cloudflare_zone_id    = "your-zone-id-for-bunqueue.io"
+domain                = "bunqueue.io"
+alert_email           = "alerts@bunqueue.io"
+
+# ============ Regions ============
+# Available: eu (Germany), us (Ashburn), asia (Singapore)
+regions = {
+  "eu" = {
+    location  = "fsn1"
+    continent = "EU"
+  }
+  "us" = {
+    location  = "ash"
+    continent = "NA"
+  }
+}
+
+# ============ Customers ============
+customers_regional = {
+  # European customers
+  "acme-corp" = {
+    plan       = "starter"
+    auth_token = "acme-secret-token-12345"
+    region     = "eu"
+  }
+
+  "german-startup" = {
+    plan       = "pro"
+    auth_token = "german-secret-token-67890"
+    region     = "eu"
+  }
+
+  # US customers
+  "us-enterprise" = {
+    plan       = "enterprise"
+    auth_token = "us-secret-token-xxxxx"
+    region     = "us"
+  }
+
+  "silicon-valley-co" = {
+    plan       = "pro"
+    auth_token = "sv-secret-token-yyyyy"
+    region     = "us"
+  }
+}
