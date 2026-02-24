@@ -18,7 +18,8 @@
 
 <p align="center">
   <a href="https://bunqueue.dev/"><strong>Documentation</strong></a> ·
-  <a href="https://bunqueue.dev/guide/benchmarks/"><strong>Benchmarks</strong></a>
+  <a href="https://bunqueue.dev/guide/benchmarks/"><strong>Benchmarks</strong></a> ·
+  <a href="https://github.com/egeominotti/bunqueue/stargazers"><strong>Star on GitHub</strong></a>
 </p>
 
 ---
